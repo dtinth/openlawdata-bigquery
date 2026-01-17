@@ -46,7 +46,7 @@ export function saveState(entries: SyncedFile[]): void {
 export interface PartitionInfo {
   baseTable: string;           // "ocr_iapp" or "meta"
   yearMonth: string;           // "2025-01"
-  partitionDecorator: string;  // "$202501"
+  partitionDecorator: string | null;  // "$202501" or null for pre-1960 dates
   publishMonth: string;        // "2025-01-01"
 }
 
@@ -57,7 +57,9 @@ export function parseFilenameForPartitioning(filename: string): PartitionInfo {
     throw new Error(`Invalid filename format: ${filename}`);
   }
 
-  const [_, year, month] = match;
+  const year = match[1]!;
+  const month = match[2]!;
+  const yearNum = parseInt(year, 10);
 
   // Determine base table from path
   let baseTable: string;
@@ -69,16 +71,21 @@ export function parseFilenameForPartitioning(filename: string): PartitionInfo {
     throw new Error(`Unknown file path prefix: ${filename}`);
   }
 
+  // BigQuery partitions only support dates from 1960-01-01 to 2159-12-31
+  // Pre-1960 dates go to __UNPARTITIONED__ automatically (no decorator needed)
+  const partitionDecorator = yearNum < 1960 ? null : `$${year}${month}`;
+
   return {
     baseTable,
     yearMonth: `${year}-${month}`,
-    partitionDecorator: `$${year}${month}`,
+    partitionDecorator,
     publishMonth: `${year}-${month}-01`,
   };
 }
 
 export function filenameToTableName(filename: string): string {
   // ocr/iapp/2025/2025-01.jsonl -> ocr_iapp$202501
+  // ocr/iapp/1885/1885-01.jsonl -> ocr_iapp (no decorator for pre-1960)
   const partitionInfo = parseFilenameForPartitioning(filename);
-  return `${partitionInfo.baseTable}${partitionInfo.partitionDecorator}`;
+  return `${partitionInfo.baseTable}${partitionInfo.partitionDecorator ?? ""}`;
 }

@@ -128,21 +128,26 @@ export async function getOrCreatePartitionedTable(
 
 export async function loadToPartition(
   baseTableName: string,
-  partitionDecorator: string,
+  partitionDecorator: string | null,
   jsonlFilePath: string
 ): Promise<number> {
   const dataset = bq.dataset(DATASET_ID);
 
   // Use decorator syntax: ocr_iapp$202501
-  const partitionedTableName = `${baseTableName}${partitionDecorator}`;
+  // For pre-1960 dates, no decorator - BigQuery auto-routes to __UNPARTITIONED__
+  const partitionedTableName = `${baseTableName}${partitionDecorator ?? ""}`;
   const table = dataset.table(partitionedTableName);
 
   console.log(`Loading ${jsonlFilePath} into ${partitionedTableName}...`);
 
+  // Use WRITE_TRUNCATE for specific partitions, WRITE_APPEND for __UNPARTITIONED__
+  // (pre-1960 dates have no decorator and go to __UNPARTITIONED__)
+  const writeDisposition = partitionDecorator ? "WRITE_TRUNCATE" : "WRITE_APPEND";
+
   const metadata: JobLoadMetadata = {
     sourceFormat: "NEWLINE_DELIMITED_JSON",
     schema: PARTITIONED_SCHEMA,
-    writeDisposition: "WRITE_TRUNCATE",
+    writeDisposition,
   };
 
   const [jobMetadata] = await table.load(jsonlFilePath, metadata);

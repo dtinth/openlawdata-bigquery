@@ -14,13 +14,23 @@ describe("parseFilenameForPartitioning", () => {
     });
   });
 
-  it("parses meta files correctly", () => {
+  it("parses meta files correctly (pre-1960)", () => {
     const result = parseFilenameForPartitioning("meta/1885/1885-01.jsonl");
     expect(result).toEqual({
       baseTable: "meta",
       yearMonth: "1885-01",
-      partitionDecorator: "$188501",
+      partitionDecorator: null, // Pre-1960 goes to __UNPARTITIONED__
       publishMonth: "1885-01-01",
+    });
+  });
+
+  it("parses files from 1960 (boundary year)", () => {
+    const result = parseFilenameForPartitioning("meta/1960/1960-01.jsonl");
+    expect(result).toEqual({
+      baseTable: "meta",
+      yearMonth: "1960-01",
+      partitionDecorator: "$196001", // 1960 is valid for partitioning
+      publishMonth: "1960-01-01",
     });
   });
 
@@ -54,8 +64,9 @@ describe("filenameToTableName", () => {
     );
   });
 
-  it("converts meta files to partitioned table names", () => {
-    expect(filenameToTableName("meta/1885/1885-01.jsonl")).toBe("meta$188501");
+  it("converts meta files to partitioned table names (pre-1960)", () => {
+    // Pre-1960 dates have no decorator - BigQuery routes to __UNPARTITIONED__
+    expect(filenameToTableName("meta/1885/1885-01.jsonl")).toBe("meta");
   });
 
   it("handles different months correctly", () => {
@@ -69,6 +80,11 @@ describe("filenameToTableName", () => {
     expect(filenameToTableName("ocr/iapp/2025/2025-03.jsonl")).toBe(
       "ocr_iapp$202503"
     );
-    expect(filenameToTableName("meta/1900/1900-01.jsonl")).toBe("meta$190001");
+    // 1900 is pre-1960, so no decorator
+    expect(filenameToTableName("meta/1900/1900-01.jsonl")).toBe("meta");
+  });
+
+  it("handles 1960 boundary year", () => {
+    expect(filenameToTableName("meta/1960/1960-01.jsonl")).toBe("meta$196001");
   });
 });
