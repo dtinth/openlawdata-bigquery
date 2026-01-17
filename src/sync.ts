@@ -46,6 +46,7 @@ interface EnrichedData {
   filename: string;
   line_number: number;
   publish_month: string;
+  file_commit: string;
 }
 
 async function downloadFile(
@@ -70,7 +71,8 @@ async function transformJsonlWithMetadata(
   inputPath: string,
   outputPath: string,
   filename: string,
-  publishMonth: string
+  publishMonth: string,
+  fileCommit: string
 ): Promise<number> {
   console.log(`Transforming ${inputPath}...`);
 
@@ -96,6 +98,7 @@ async function transformJsonlWithMetadata(
             filename,
             line_number: lineNumber,
             publish_month: publishMonth,
+            file_commit: fileCommit,
           };
 
           output.write(JSON.stringify(enrichedData) + "\n");
@@ -130,12 +133,13 @@ export async function syncFile(task: SyncTask): Promise<void> {
     // Download file
     await downloadFile(task.filename, downloadPath);
 
-    // Transform: add filename, line_number, and publish_month
+    // Transform: add filename, line_number, publish_month, and file_commit
     const rowCount = await transformJsonlWithMetadata(
       downloadPath,
       transformedPath,
       task.filename,
-      partitionInfo.publishMonth
+      partitionInfo.publishMonth,
+      task.fileMetadata.commitHash
     );
 
     // Ensure dataset exists

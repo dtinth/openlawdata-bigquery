@@ -31,6 +31,7 @@ const PARTITIONED_SCHEMA: TableSchema = {
     { name: "filename", type: "STRING", mode: "REQUIRED" },
     { name: "line_number", type: "INT64", mode: "REQUIRED" },
     { name: "publish_month", type: "DATE", mode: "REQUIRED" },
+    { name: "file_commit", type: "STRING", mode: "REQUIRED" },
   ],
 };
 

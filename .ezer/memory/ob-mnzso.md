@@ -6,7 +6,7 @@ KEY LEARNINGS & GOTCHAS:
 
 NO 'as any':
 - BigQuery SDK types are complex; use proper interfaces instead
-- EnrichedData interface with publish_month: string (never optional for partitioned data)
+- EnrichedData interface with all required fields including file_commit
 - JobLoadMetadata requires proper typing, no type escapes
 
 BIGQUERY PARTITION DECORATORS:
@@ -34,3 +34,9 @@ WORKLOAD IDENTITY FEDERATION:
 - Requires: WIF pool, OIDC provider, service account with iam.workloadIdentityUser
 - Must enable iamcredentials.googleapis.com API
 - Workflow needs id-token: write permission
+
+PRE-1960 DATA HANDLING:
+- Pre-1960 files use WRITE_APPEND (not WRITE_TRUNCATE) to __UNPARTITIONED__ partition
+- If a pre-1960 file is re-synced, old data remains with old file_commit, new data gets appended
+- file_commit column enables duplicate detection: query records where filename=X AND file_commit != current_hash
+- Manual cleanup can be done if stale duplicates are detected (not automated yet)
