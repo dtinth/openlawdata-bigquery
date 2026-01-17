@@ -1,0 +1,22 @@
+name: Sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 17 * * *"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/546274278843/locations/global/workloadIdentityPools/github/providers/my-repo
+          service_account: gha-openlawdata-bigquery@sourceinth.iam.gserviceaccount.com
+      - uses: jdx/mise-action@v2.1.0
+      - run: bun install
+      - run: bun run sync
