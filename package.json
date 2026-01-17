@@ -1,0 +1,24 @@
+{
+  "name": "openlawdata-bq",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "sync": "bun run src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@tsconfig/bun": "^1.0.10",
+    "@types/bun": "latest",
+    "@types/node": "^25.0.9",
+    "@types/papaparse": "^5.5.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@google-cloud/bigquery": "^8.1.1",
+    "ofetch": "^1.5.1",
+    "papaparse": "^5.5.3"
+  }
+}
