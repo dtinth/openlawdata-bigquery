@@ -20,8 +20,8 @@ FILENAME PARSING:
 - Date always 01 of the month (2025-01-01, not variable day)
 
 STATE MANAGEMENT:
+- State file is state.csv
 - table_name field includes partition decorator in state file
-- This differs from old approach of full table name per month
 - State CSV keeps all syncs for incremental detection
 
 HF API PAGINATION:
@@ -29,7 +29,8 @@ HF API PAGINATION:
 - Solution: Non-recursive year listing first, then recursive per year
 - Still fast and avoids pagination complications
 
-TYPE STRICTNESS:
-- bun:test works with expect() from bun:test module
-- Tests pass for both ocr/iapp and meta paths
-- parseFilenameForPartitioning throws on invalid formats (important validation)
+WORKLOAD IDENTITY FEDERATION:
+- GitHub Actions authenticates to GCP without secrets
+- Requires: WIF pool, OIDC provider, service account with iam.workloadIdentityUser
+- Must enable iamcredentials.googleapis.com API
+- Workflow needs id-token: write permission
