@@ -17,7 +17,10 @@ COMPLETED:
 ✓ TypeScript type checking (tsc --noEmit passes)
 ✓ GitHub Actions workflow with Workload Identity Federation
 ✓ Scheduled daily sync at 17:00 UTC
+✓ Pre-1960 date handling: null partitionDecorator routes to __UNPARTITIONED__
+✓ Commit: a6a91e2 'Handle pre-1960 dates in BigQuery partitioning'
 
 READY TO TEST:
 - Full end-to-end sync via GitHub Actions
 - Incremental sync detection (second run should find no changes)
+- Pre-1960 data routing to unpartitioned segment
