@@ -43,14 +43,42 @@ export function saveState(entries: SyncedFile[]): void {
   writeFileSync(STATE_FILE, csv, "utf-8");
 }
 
+export interface PartitionInfo {
+  baseTable: string;           // "ocr_iapp" or "meta"
+  yearMonth: string;           // "2025-01"
+  partitionDecorator: string;  // "$202501"
+  publishMonth: string;        // "2025-01-01"
+}
+
+export function parseFilenameForPartitioning(filename: string): PartitionInfo {
+  // Extract YYYY-MM from filename
+  const match = filename.match(/(\d{4})-(\d{2})\.jsonl$/);
+  if (!match) {
+    throw new Error(`Invalid filename format: ${filename}`);
+  }
+
+  const [_, year, month] = match;
+
+  // Determine base table from path
+  let baseTable: string;
+  if (filename.startsWith("ocr/iapp/")) {
+    baseTable = "ocr_iapp";
+  } else if (filename.startsWith("meta/")) {
+    baseTable = "meta";
+  } else {
+    throw new Error(`Unknown file path prefix: ${filename}`);
+  }
+
+  return {
+    baseTable,
+    yearMonth: `${year}-${month}`,
+    partitionDecorator: `$${year}${month}`,
+    publishMonth: `${year}-${month}-01`,
+  };
+}
+
 export function filenameToTableName(filename: string): string {
-  // ocr/iapp/2025/2025-01.jsonl -> ocr_iapp_2025_01
-  let name = filename
-    .replace(/\.jsonl$/, "") // remove ".jsonl"
-    .replace(/\//g, "_"); // replace "/" with "_"
-
-  // Remove redundant year prefix: ocr_iapp_2025_2025-01 -> ocr_iapp_2025_01
-  name = name.replace(/_(\d{4})_\1-/, "_$1_");
-
-  return name;
+  // ocr/iapp/2025/2025-01.jsonl -> ocr_iapp$202501
+  const partitionInfo = parseFilenameForPartitioning(filename);
+  return `${partitionInfo.baseTable}${partitionInfo.partitionDecorator}`;
 }

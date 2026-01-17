@@ -1,8 +1,8 @@
 import { fetchHFFileMetadata } from "./hf";
 import type { FileMetadata } from "./hf";
-import { loadState, saveState, filenameToTableName } from "./state";
+import { loadState, saveState, filenameToTableName, parseFilenameForPartitioning } from "./state";
 import type { SyncedFile } from "./state";
-import { truncateAndLoadTable, getOrCreateDataset } from "./bigquery";
+import { truncateAndLoadTable, getOrCreateDataset, getOrCreatePartitionedTable, loadToPartition } from "./bigquery";
 import { $fetch } from "ofetch";
 import { writeFileSync, createReadStream, createWriteStream, mkdirSync } from "fs";
 import { join, dirname } from "path";
@@ -41,6 +41,13 @@ export async function findSyncTasks(): Promise<SyncTask[]> {
   return tasks;
 }
 
+interface EnrichedData {
+  content: unknown;
+  filename: string;
+  line_number: number;
+  publish_month: string;
+}
+
 async function downloadFile(
   filename: string,
   targetPath: string
@@ -62,7 +69,8 @@ async function downloadFile(
 async function transformJsonlWithMetadata(
   inputPath: string,
   outputPath: string,
-  filename: string
+  filename: string,
+  publishMonth: string
 ): Promise<number> {
   console.log(`Transforming ${inputPath}...`);
 
@@ -83,11 +91,13 @@ async function transformJsonlWithMetadata(
         try {
           lineNumber++;
           const jsonData = JSON.parse(line);
-          const enrichedData = {
+          const enrichedData: EnrichedData = {
             content: jsonData,
             filename,
             line_number: lineNumber,
+            publish_month: publishMonth,
           };
+
           output.write(JSON.stringify(enrichedData) + "\n");
           processedLines++;
         } catch (e) {
@@ -110,6 +120,9 @@ export async function syncFile(task: SyncTask): Promise<void> {
   const downloadPath = join(DOWNLOAD_DIR, task.filename);
   const transformedPath = join(DOWNLOAD_DIR, `${task.tableName}.transformed.jsonl`);
 
+  // Parse partition info from filename
+  const partitionInfo = parseFilenameForPartitioning(task.filename);
+
   // Ensure downloads directory exists
   mkdirSync(DOWNLOAD_DIR, { recursive: true });
 
@@ -117,18 +130,26 @@ export async function syncFile(task: SyncTask): Promise<void> {
     // Download file
     await downloadFile(task.filename, downloadPath);
 
-    // Transform: add filename and line_number
+    // Transform: add filename, line_number, and publish_month
     const rowCount = await transformJsonlWithMetadata(
       downloadPath,
       transformedPath,
-      task.filename
+      task.filename,
+      partitionInfo.publishMonth
     );
 
     // Ensure dataset exists
     await getOrCreateDataset();
 
-    // Load to BigQuery using native JSONL loader
-    await truncateAndLoadTable(task.tableName, transformedPath);
+    // Ensure partitioned table exists
+    await getOrCreatePartitionedTable(partitionInfo.baseTable);
+
+    // Load to partition
+    await loadToPartition(
+      partitionInfo.baseTable,
+      partitionInfo.partitionDecorator,
+      transformedPath
+    );
 
     // Update state
     const state = loadState();
