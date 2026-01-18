@@ -1,4 +1,4 @@
-# openlawdata-bq
+# openlawdata-bigquery
 
 โครงการ mirror [ชุดข้อมูล](https://huggingface.co/datasets/open-law-data-thailand)จากโครงการ [Open Law Data Thailand](https://www.openlawdatathailand.org/) ขึ้นไปยัง [Google BigQuery](https://cloud.google.com/bigquery) เพื่อให้สามารถ query ข้อมูลได้สะดวก
 
